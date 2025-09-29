@@ -27,20 +27,21 @@ pipeline {
         stage('Tests') {
             parallel {
                 stage('Unit test') {
-                    agent {
-                        docker {
-                            image 'node:18-alpine'
-                            reuseNode true
-                        }
-                    }
-                    steps {
-                        sh '''
-                            test -f build/index.html
-                            npm test
-                        '''
-                        junit 'jest-results/junit.xml'
-                    }
-                }
+    agent {
+        docker {
+            image 'node:18-alpine'
+            reuseNode true
+        }
+    }
+    steps {
+        sh '''
+            test -f build/index.html
+            npm test
+        '''
+        junit 'jest-results/junit.xml'
+    }
+}
+
 
                 stage('E2E') {
                     agent {
