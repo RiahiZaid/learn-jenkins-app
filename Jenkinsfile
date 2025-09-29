@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    enviromment {
+        NETLIFY_SITE_ID = '5c1ad21b-6377-4545-a29b-02fc88c589ff'
+    }
+
     stages {
         stage('Build') {
             agent {
@@ -36,6 +40,11 @@ pipeline {
                             npm test
                         '''
                     }
+                    post {
+                        always {
+                            junit 'jest-results/junit.xml'
+                        }
+                    }
                 }
 
                 stage('E2E') {
@@ -58,11 +67,7 @@ pipeline {
 
             post {
                 always {
-                    publishHTML([
-                        reportDir: 'playwright-report',
-                        reportFiles: 'index.html',
-                        reportName: 'Playwright E2E Report'
-                    ])
+                    publishHTML([ allowMissing: false,alwaysLinkToLastBuild: false,keepAll: false,reportDir:'Rapport des Tests'])
                 }
             }
         }
@@ -77,7 +82,8 @@ pipeline {
             steps {
                 sh '''
                     npm install netlify-cli -g
-                    netlify --version
+                    node_modules/.bin/netlify --version
+                    echo "deploying to production. Site ID : $NETLIFY_SITE_ID"
                 '''
             }
         }
