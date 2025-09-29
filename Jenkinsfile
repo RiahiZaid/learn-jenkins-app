@@ -2,97 +2,88 @@ pipeline {
     agent any
 
     environment {
-        NETLIFY_SITE_ID = '5c1ad21b-6377-4545-a29b-02fc88c589ff'
+        NODE_IMAGE = 'node:18-alpine'
+        PLAYWRIGHT_IMAGE = 'mcr.microsoft.com/playwright:v1.39.0-jammy'
     }
 
     stages {
-        stage('Build') {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install & Build') {
             agent {
                 docker {
-                    image 'node:18-alpine'
-                    reuseNode true
+                    image "${NODE_IMAGE}"
+                    args '-u node'
                 }
             }
             steps {
-                sh '''
-                    ls -la
-                    node --version
-                    npm --version
-                    npm ci
-                    npm run build
-                    ls -la
-                '''
+                sh 'node --version'
+                sh 'npm --version'
+                sh 'npm ci'
+                sh 'npm run build'
             }
         }
 
         stage('Tests') {
             parallel {
-                stage('Unit test') {
+                stage('Unit Tests') {
                     agent {
                         docker {
-                            image 'node:18-alpine'
-                            reuseNode true
+                            image "${NODE_IMAGE}"
+                            args '-u node'
                         }
                     }
                     steps {
                         sh '''
-                            test -f build/index.html
-                            npm test
+                        npm test -- --ci --reporters=default --reporters=jest-junit
                         '''
-                    }
-                    post {
-                        always {
-                            junit 'jest-results/junit.xml'
-                        }
+                        junit '**/junit.xml'
                     }
                 }
 
-                stage('E2E') {
+                stage('E2E Tests') {
                     agent {
                         docker {
-                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
-                            reuseNode true
+                            image "${PLAYWRIGHT_IMAGE}"
                         }
                     }
                     steps {
                         sh '''
-                            npm install serve
-                            ./node_modules/.bin/serve -s build &
-                            sleep 10
-                            npx playwright test --reporter=html
+                        npm install -g serve
+                        serve -s build & sleep 10
+                        npx playwright test --reporter=html
                         '''
+                        // Archive le rapport HTML
+                        archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
                     }
-                }
-            }
-
-            post {
-                always {
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: false,
-                        keepAll: false,
-                        reportDir: 'Rapport des Tests',  // Ici tu dois mettre le dossier exact contenant ton index.html
-                        reportFiles: 'index.html',      // fichier principal du rapport
-                        reportName: 'Rapport des Tests'
-                    ])
                 }
             }
         }
 
         stage('Deploy') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                sh '''
-                    npm install netlify-cli -g
-                    node_modules/.bin/netlify --version
-                    echo "deploying to production. Site ID : $NETLIFY_SITE_ID"
-                '''
+                echo 'Déploiement...'
+                // Ici tu peux ajouter ton script de déploiement
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline terminé avec succès !'
+        }
+        failure {
+            echo 'Pipeline échoué.'
         }
     }
 }
