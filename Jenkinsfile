@@ -58,7 +58,11 @@ pipeline {
 
             post {
                 always {
-                    junit 'test-results/junit.xml'
+                    publishHTML([
+                        reportDir: 'playwright-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Playwright E2E Report'
+                    ])
                 }
             }
         }
@@ -72,8 +76,8 @@ pipeline {
             }
             steps {
                 sh '''
-                    npm install netlify-cli
-                     ./node_modules/.bin/netlify --version
+                    npm install netlify-cli -g
+                    netlify --version
                 '''
             }
         }
