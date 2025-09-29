@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-    enviromment {
+    environment {
         NETLIFY_SITE_ID = '5c1ad21b-6377-4545-a29b-02fc88c589ff'
     }
 
@@ -67,7 +67,14 @@ pipeline {
 
             post {
                 always {
-                    publishHTML([ allowMissing: false,alwaysLinkToLastBuild: false,keepAll: false,reportDir:'Rapport des Tests'])
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: false,
+                        keepAll: false,
+                        reportDir: 'Rapport des Tests',  // Ici tu dois mettre le dossier exact contenant ton index.html
+                        reportFiles: 'index.html',      // fichier principal du rapport
+                        reportName: 'Rapport des Tests'
+                    ])
                 }
             }
         }
